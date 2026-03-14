@@ -13,7 +13,6 @@ import { RankingService } from './ranking.service';
 import { Response } from 'express';
 import { RankingEntry } from './dto/ranking-entry.dto';
 import { CatchException } from '../utils/catch-exception';
-import { RateLimit } from 'nestjs-rate-limiter';
 
 @Controller('api/v1/ranking')
 export class RankingController {
@@ -65,11 +64,6 @@ export class RankingController {
 
    @UseGuards(JwtAuthGuard)
    @Post()
-   @RateLimit({
-      points: 1,
-      duration: 20,
-      errorMessage: 'Muitas requisições. Tente novamente mais tarde',
-   })
    async setRankingEntry(
       @Headers('Authorization') auth: string,
       @Res() res: Response,

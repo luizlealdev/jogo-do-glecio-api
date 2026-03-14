@@ -13,7 +13,6 @@ import { JwtAuthGuard } from '../auth/jwt/jwt.auth.guard';
 import { CatchException } from 'src/utils/catch-exception';
 import { UserService } from './user.service';
 import { UpdatePaswordUser, UpdateUser } from './dto/user-updates.dto';
-import { RateLimit } from 'nestjs-rate-limiter';
 
 @Controller('api/v1/user')
 export class UserController {
@@ -42,11 +41,6 @@ export class UserController {
       }
    }
 
-   @RateLimit({
-      points: 3,
-      duration: 20,
-      errorMessage: 'Muitas requisições. Tente novamente mais tarde',
-   })
    @Put('update')
    @UseGuards(JwtAuthGuard)
    async updateUser(
@@ -72,11 +66,6 @@ export class UserController {
       }
    }
 
-   @RateLimit({
-      points: 1,
-      duration: 10,
-      errorMessage: 'Muitas requisições. Tente novamente mais tarde',
-   })
    @Put('update/password')
    @UseGuards(JwtAuthGuard)
    async updateUserPassword(
