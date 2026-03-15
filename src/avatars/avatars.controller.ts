@@ -7,13 +7,13 @@ import { join } from 'path';
 export class AvatarsController {
    constructor(private avatarsService: AvatarsService) {}
 
-   @Get('all')
+   @Get()
    async getAvatars() {
       const avatars = await this.avatarsService.getAvatars();
       return avatars;
    }
 
-   @Get('id/:id')
+   @Get(':id')
    async getSpecificAvatar(
       @Headers('Authorization') auth: string,
       @Param('id') id,
