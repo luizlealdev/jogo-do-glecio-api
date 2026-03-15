@@ -18,6 +18,8 @@ import { CoursesController } from './courses/courses.controller';
 import { CoursesService } from './courses/courses.service';
 import { MailModule } from './mail/mail.module';
 import { APP_GUARD } from '@nestjs/core';
+import { RedisModule } from "./redis/redis.module";
+import { RedisService } from "./redis/redis.service";
 
 @Module({
    imports: [
@@ -25,6 +27,7 @@ import { APP_GUARD } from '@nestjs/core';
       PrismaModule,
       UserModule,
       MailModule,
+      RedisModule,
       ScheduleModule.forRoot(),
    ],
    controllers: [
