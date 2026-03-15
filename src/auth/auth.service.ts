@@ -102,7 +102,7 @@ export class AuthService {
                is_admin: user.is_admin,
             },
             access_token: this.jwtService.sign({
-               sub: user.id,
+               sub: Number(user.id),
                email: (await user).email,
             }),
          };
