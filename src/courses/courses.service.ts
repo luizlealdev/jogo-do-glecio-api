@@ -2,11 +2,15 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { TokenUtils } from '../utils/token-utils';
+import { RedisService } from '../redis/redis.service';
+
+const COURSES_CACHE_TTL = 60 * 60 * 24; // 24 hours
 
 @Injectable()
 export class CoursesService {
    constructor(
       private prisma: PrismaService,
+      private redis: RedisService,
       private readonly jwtService: JwtService,
    ) {}
 
@@ -25,27 +29,24 @@ export class CoursesService {
               )?.is_admin
             : false;
 
-         let courses;
+         const cachedCourses = await this.redis.getJson('courses');
 
-         if (isAdmin) {
-            courses = await this.prisma.course.findMany({
-               where: {
-                  is_active: true,
-               },
-               orderBy: {
-                  name: 'asc',
-               },
-            });
-         } else {
-            courses = await this.prisma.course.findMany({
-               where: {
-                  is_special: false,
-                  is_active: true,
-               },
-               orderBy: {
-                  name: 'asc',
-               },
-            });
+         if (!isAdmin && cachedCourses) {
+            return cachedCourses;
+         }
+
+         const courses = await this.prisma.course.findMany({
+            where: {
+               is_active: true,
+               ...(isAdmin ? {} : { is_special: false }),
+            },
+            orderBy: {
+               name: 'asc',
+            },
+         });
+
+         if (!isAdmin) {
+            await this.redis.setJson('courses', courses, COURSES_CACHE_TTL);
          }
 
          return courses;
@@ -68,26 +69,18 @@ export class CoursesService {
               )?.is_admin
             : false;
 
-         let course;
+         const course = await this.prisma.course.findFirst({
+            where: {
+               id: Number(id),
+               is_active: true,
+               ...(isAdmin ? {} : { is_special: false }),
+            },
+            orderBy: {
+               name: 'asc',
+            },
+         });
 
-         if (isAdmin) {
-            course = await this.prisma.course.findMany({
-               where: {
-                  is_active: true,
-                  id: Number(id),
-               },
-            });
-         } else {
-            course = await this.prisma.course.findMany({
-               where: {
-                  is_special: false,
-                  is_active: true,
-                  id: Number(id),
-               },
-            });
-         }
-
-         if (course.length === 0)
+         if (!course)
             throw new NotFoundException('Turma ou curso não encontrado');
 
          return course;

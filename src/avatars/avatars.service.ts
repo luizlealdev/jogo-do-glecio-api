@@ -6,6 +6,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { TokenUtils } from '../utils/token-utils';
 
+const AVATARS_CACHE_TTL = 60 * 60 * 24; // 24 hours
+
 @Injectable()
 export class AvatarsService {
    constructor(
