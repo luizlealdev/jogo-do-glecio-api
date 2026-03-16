@@ -17,7 +17,7 @@ export class MailService {
          }
 
          const response = await emailjs.send(
-            'tabuada_email',
+            'jogo_do_glecio',
             'reset_password',
             templateOptions,
             {
