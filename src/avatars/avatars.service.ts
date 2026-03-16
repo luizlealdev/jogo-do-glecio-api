@@ -60,7 +60,7 @@ export class AvatarsService {
 
          const avatar = await this.prisma.avatar.findFirst({
             where: {
-               id: Number(id),
+               id: BigInt(id),
                ...(isAdmin ? {} : { is_special: false }),
             },
             select: {

@@ -71,7 +71,7 @@ export class CoursesService {
 
          const course = await this.prisma.course.findFirst({
             where: {
-               id: Number(id),
+               id: BigInt(id),
                is_active: true,
                ...(isAdmin ? {} : { is_special: false }),
             },
