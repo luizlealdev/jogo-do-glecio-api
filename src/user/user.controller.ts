@@ -3,7 +3,6 @@ import {
    Controller,
    Put,
    Headers,
-   Res,
    UseGuards,
    Get,
    Param,
