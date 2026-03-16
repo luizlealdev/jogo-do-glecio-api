@@ -79,7 +79,7 @@ export class AuthService {
 
          if (!user)
             throw new NotFoundException(
-               'O usuário com este não foi encontrado.',
+               'O usuário com este e-mail não foi encontrado.',
             );
 
          const passwordMatches = await bcrypt.compare(
@@ -102,7 +102,7 @@ export class AuthService {
                is_admin: user.is_admin,
             },
             access_token: this.jwtService.sign({
-               sub: user.id,
+               sub: BigInt(user.id),
                email: (await user).email,
             }),
          };

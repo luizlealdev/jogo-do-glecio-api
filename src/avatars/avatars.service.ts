@@ -1,15 +1,16 @@
-import {
-   Injectable,
-   NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { TokenUtils } from '../utils/token-utils';
+import { RedisService } from 'src/redis/redis.service';
+
+const AVATARS_CACHE_TTL = 60 * 60 * 24; // 24 hours
 
 @Injectable()
 export class AvatarsService {
    constructor(
       private prisma: PrismaService,
+      private redis: RedisService,
       private readonly jwtService: JwtService,
    ) {}
 
@@ -17,6 +18,12 @@ export class AvatarsService {
 
    async getAvatars(): Promise<any> {
       try {
+         const cachedAvatars = await this.redis.getJson('avatars');
+
+         if (cachedAvatars) {
+            return cachedAvatars;
+         }
+
          const avatars = await this.prisma.avatar.findMany({
             where: {
                is_special: false,
@@ -28,6 +35,8 @@ export class AvatarsService {
                path_128px: true,
             },
          });
+
+         await this.redis.setJson('avatars', avatars, AVATARS_CACHE_TTL);
 
          return avatars;
       } catch (err) {
@@ -49,39 +58,20 @@ export class AvatarsService {
               )?.is_admin
             : false;
 
-         let avatar;
+         const avatar = await this.prisma.avatar.findFirst({
+            where: {
+               id: BigInt(id),
+               ...(isAdmin ? {} : { is_special: false }),
+            },
+            select: {
+               id: true,
+               path_default: true,
+               path_256px: true,
+               path_128px: true,
+            },
+         });
 
-         if (isAdmin) {
-            avatar = await this.prisma.avatar.findMany({
-               where: {
-                  id: Number(id),
-               },
-               select: {
-                  id: true,
-                  path_default: true,
-                  path_256px: true,
-                  path_128px: true,
-               },
-            });
-         } else {
-            avatar = await this.prisma.avatar.findMany({
-               where: {
-                  id: Number(id),
-                  is_special: false,
-               },
-               select: {
-                  id: true,
-                  path_default: true,
-                  path_256px: true,
-                  path_128px: true,
-               },
-            });
-         }
-
-         console.log(avatar);
-
-         if (avatar.length === 0)
-            throw new NotFoundException('Avatar não encontrado.');
+         if (!avatar) throw new NotFoundException('Avatar não encontrado.');
 
          return avatar;
       } catch (err) {

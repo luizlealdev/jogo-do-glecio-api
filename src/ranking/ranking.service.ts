@@ -1,6 +1,5 @@
 import {
    BadRequestException,
-   Body,
    Injectable,
    UnauthorizedException,
 } from '@nestjs/common';
@@ -8,25 +7,29 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RankingEntry } from './dto/ranking-entry.dto';
 import { JwtService } from '@nestjs/jwt';
 import { TokenUtils } from '../utils/token-utils';
+import { RedisService } from '../redis/redis.service';
+
+const RANKING_CACHE_TTL = 60 * 60;
 
 @Injectable()
 export class RankingService {
    constructor(
       private prisma: PrismaService,
+      private redis: RedisService,
       private readonly jwtService: JwtService,
    ) {}
 
    tokenUtils = new TokenUtils(this.jwtService);
 
-   private cacheNormalRankingData = [];
-   private cacheGlobalRankingData = [];
+   /* NORMAL RANKING */
 
    async getAllRankingEntries(): Promise<any> {
       try {
-         if (this.cacheNormalRankingData.length != 0) {
-            console.log('Application: returning normal ranking cache entries');
+         const cache = await this.redis.getJson('rankingEntries');
 
-            return this.cacheNormalRankingData;
+         if (cache) {
+            console.info('[RankingService]: returning cached ranking');
+            return cache;
          }
 
          const rankingEntries = await this.prisma.ranking.findMany({
@@ -58,20 +61,27 @@ export class RankingService {
             },
          });
 
-         this.cacheNormalRankingData = rankingEntries;
+         await this.redis.setJson(
+            'rankingEntries',
+            rankingEntries,
+            RANKING_CACHE_TTL,
+         );
+
          return rankingEntries;
       } catch (err) {
+         console.error(err);
          throw err;
       }
    }
 
-   /* Global Ranking Entries */
+   /* GLOBAL RANKING */
 
    async getAllGlobalRankEntries(): Promise<any> {
-      if (this.cacheGlobalRankingData.length != 0) {
-         console.log('Application: returning global ranking cache entries');
+      const cache = await this.redis.getJson('globalRankingEntries');
 
-         return this.cacheGlobalRankingData;
+      if (cache) {
+         console.info('[RankingService]: returning cached global ranking');
+         return cache;
       }
 
       const rankingEntries = await this.prisma.ranking_global.findMany({
@@ -103,76 +113,78 @@ export class RankingService {
          },
       });
 
-      this.cacheGlobalRankingData = rankingEntries;
+      await this.redis.setJson(
+         'globalRankingEntries',
+         rankingEntries,
+         RANKING_CACHE_TTL,
+      );
+
       return rankingEntries;
    }
 
+   /* SET SCORE */
+
    async setRankingEntry(auth: string, data: RankingEntry): Promise<any> {
+      if (data.score < 0) throw new BadRequestException('Score inválido.');
+
+      const decodedToken = this.tokenUtils.getDecodedToken(auth);
+      const userId = decodedToken.sub;
+
+      const newRankingEntry = await this.prisma.ranking.upsert({
+         where: { user_id: userId },
+         update: { score: data.score },
+         create: { user_id: userId, score: data.score },
+         select: {
+            score: true,
+            user_id: true,
+            user: { select: { max_score: true } },
+         },
+      });
+
+      this.updateGlobalStatsAndCache(
+         userId,
+         data.score,
+         newRankingEntry.user.max_score ?? 0,
+      ).catch((err) => console.error('[RankingService Background Task]:', err));
+
+      return newRankingEntry;
+   }
+
+   private async updateGlobalStatsAndCache(
+      userId: number,
+      newScore: number,
+      currentMaxScore: number,
+   ) {
       try {
-         const decodedToken = this.tokenUtils.getDecodedToken(auth);
+         const promises: Promise<any>[] = [this.redis.del('rankingEntries')];
 
-         const newRankingEntry = this.prisma.ranking.upsert({
-            where: {
-               user_id: decodedToken.sub,
-            },
-            update: {
-               score: data.score,
-            },
-            create: {
-               score: data.score,
-               user_id: decodedToken.sub,
-            },
-            select: {
-               score: true,
-               user_id: true,
-            },
-         });
+         if (newScore > currentMaxScore) {
+            console.log('[RankingService]: updating global ranking');
 
-         const currentUser = await this.prisma.user.findUnique({
-            where: {
-               id: decodedToken.sub,
-            },
-         });
-
-         if (data.score > currentUser.max_score) {
-            console.log('Application: setting global ranking entry');
-
-            await this.prisma.ranking_global.upsert({
-               where: {
-                  user_id: decodedToken.sub,
-               },
-               update: {
-                  score: data.score,
-               },
-               create: {
-                  score: data.score,
-                  user_id: decodedToken.sub,
-               },
-               select: {
-                  score: true,
-                  user_id: true,
-               },
-            });
-
-            await this.prisma.user.update({
-               where: {
-                  id: decodedToken.sub,
-               },
-               data: {
-                  max_score: data.score,
-               },
-            });
-
-            this.cacheGlobalRankingData = [];
+            promises.push(
+               this.prisma.ranking_global.upsert({
+                  where: { user_id: userId },
+                  update: { score: newScore },
+                  create: { user_id: userId, score: newScore },
+               }),
+               this.prisma.user.update({
+                  where: { id: userId },
+                  data: { max_score: newScore },
+               }),
+               this.redis.del('globalRankingEntries'),
+            );
          }
 
-         this.cacheNormalRankingData = [];
-         return newRankingEntry;
-      } catch (err) {
-         console.error(err);
-         throw err;
+         await Promise.all(promises);
+      } catch (error) {
+         console.error(
+            '[RankingService]: Error updating global stats or cache:',
+            error,
+         );
       }
    }
+
+   /* RESET RANK */
 
    async resetNormalRank(auth: string) {
       try {
@@ -189,10 +201,12 @@ export class RankingService {
                'Você não tem permissão para acessar este recurso.',
             );
 
-         await this.prisma.ranking.deleteMany();
-         this.cacheNormalRankingData = [];
+         
+         await this.prisma.$executeRawUnsafe(`TRUNCATE TABLE ranking;`);
+
+         await this.redis.del('rankingEntries');
       } catch (err) {
-         console.error(err);
+         console.error('[RankingService]:', err);
          throw err;
       }
    }

@@ -17,8 +17,9 @@ import { AvatarsController } from './avatars/avatars.controller';
 import { CoursesController } from './courses/courses.controller';
 import { CoursesService } from './courses/courses.service';
 import { MailModule } from './mail/mail.module';
-import { RateLimiterGuard, RateLimiterModule } from 'nestjs-rate-limiter';
 import { APP_GUARD } from '@nestjs/core';
+import { RedisModule } from "./redis/redis.module";
+import { RedisService } from "./redis/redis.service";
 
 @Module({
    imports: [
@@ -26,7 +27,7 @@ import { APP_GUARD } from '@nestjs/core';
       PrismaModule,
       UserModule,
       MailModule,
-      RateLimiterModule,
+      RedisModule,
       ScheduleModule.forRoot(),
    ],
    controllers: [
@@ -45,10 +46,6 @@ import { APP_GUARD } from '@nestjs/core';
       CronService,
       AvatarsService,
       CoursesService,
-      {
-         provide: APP_GUARD,
-         useClass: RateLimiterGuard
-      }
    ],
 })
 export class AppModule {}

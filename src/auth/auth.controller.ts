@@ -2,124 +2,52 @@ import {
    Body,
    Controller,
    Post,
-   Res,
    UseGuards,
    Headers,
+   HttpCode,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { Response } from 'express';
 import { RegisterUser, LoginUser } from './dto/user.dto';
-import { CatchException } from '../utils/catch-exception';
 import { JwtTempStrategy } from './jwt/jwt-temp.strategy';
-import { RateLimit } from 'nestjs-rate-limiter';
 
 @Controller('api/v1/auth')
 export class AuthController {
    constructor(private readonly authService: AuthService) {}
 
-   exceptionCatcher = new CatchException();
-
    @Post('local/register')
-   @RateLimit({
-      points: 5,
-      duration: 35,
-      errorMessage: 'Muitas requisições. Tente novamente mais tarde',
-   })
-   async register(@Res() res: Response, @Body() data: RegisterUser) {
-      try {
-         const user = await this.authService.register(data);
-
-         return res.status(201).json({
-            status_code: 201,
-            message: 'Usuário criado com sucesso.',
-            data: user,
-         });
-      } catch (err) {
-         const exceptionInfo = this.exceptionCatcher.catch(err);
-
-         return res.status(exceptionInfo.status_code).json({
-            status_code: exceptionInfo.status_code,
-            message: exceptionInfo.message,
-         });
-      }
+   async register(@Body() data: RegisterUser) {
+      const user = await this.authService.register(data);
+      return user;
    }
 
    @Post('local/login')
-   @RateLimit({
-      points: 5,
-      duration: 30,
-      errorMessage: 'Muitas requisições. Tente novamente mais tarde',
-   })
-   async login(@Res() res: Response, @Body() data: LoginUser) {
-      try {
-         const user = await this.authService.login(data);
-
-         return res.status(200).json({
-            status_code: 200,
-            message: 'Usuário logado com sucesso.',
-            data: user,
-         });
-      } catch (err) {
-         const exceptionInfo = this.exceptionCatcher.catch(err);
-
-         return res.status(exceptionInfo.status_code).json({
-            status_code: exceptionInfo.status_code,
-            message: exceptionInfo.message,
-         });
-      }
+   @HttpCode(200)
+   async login(@Body() data: LoginUser) {
+      const user = await this.authService.login(data);
+      return user;
    }
 
-   @RateLimit({
-      points: 1,
-      duration: 20,
-      errorMessage: 'Muitas requisições. Tente novamente mais tarde',
-   })
    @Post('password-reset/request')
-   async sendCode(@Res() res: Response, @Body() data: any) {
-      try {
-         await this.authService.sendResetPasswordEmail(data);
+   @HttpCode(200)
+   async sendCode(@Body() data: any) {
+      await this.authService.sendResetPasswordEmail(data);
 
-         return res.status(200).json({
-            status_code: 200,
-            message:
-               'E-mail enviado com sucesso. Verifique sua caixa de entrada.',
-         });
-      } catch (err) {
-         const exceptionInfo = this.exceptionCatcher.catch(err);
-
-         return res.status(exceptionInfo.status_code).json({
-            status_code: exceptionInfo.status_code,
-            message: exceptionInfo.message,
-         });
-      }
+      return {
+         message: 'E-mail enviado com sucesso. Verifique sua caixa de entrada.',
+      };
    }
 
-   @RateLimit({
-      points: 1,
-      duration: 20,
-      errorMessage: 'Muitas requisições. Tente novamente mais tarde',
-   })
    @UseGuards(JwtTempStrategy)
    @Post('password-reset/confirm')
+   @HttpCode(200)
    async resetPassword(
       @Headers('Authorization') auth: string,
-      @Res() res: Response,
       @Body() data: any,
    ) {
-      try {
-         await this.authService.resetPassword(auth, data);
+      await this.authService.resetPassword(auth, data);
 
-         return res.status(200).json({
-            status_code: 200,
-            message: 'Senha resetada com sucesso.',
-         });
-      } catch (err) {
-         const exceptionInfo = this.exceptionCatcher.catch(err);
-
-         return res.status(exceptionInfo.status_code).json({
-            status_code: exceptionInfo.status_code,
-            message: exceptionInfo.message,
-         });
-      }
+      return {
+         message: 'Senha resetada com sucesso.',
+      };
    }
 }
