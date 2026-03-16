@@ -4,6 +4,7 @@ import {
    Post,
    UseGuards,
    Headers,
+   HttpCode,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterUser, LoginUser } from './dto/user.dto';
@@ -20,12 +21,14 @@ export class AuthController {
    }
 
    @Post('local/login')
+   @HttpCode(200)
    async login(@Body() data: LoginUser) {
       const user = await this.authService.login(data);
       return user;
    }
 
    @Post('password-reset/request')
+   @HttpCode(200)
    async sendCode(@Body() data: any) {
       await this.authService.sendResetPasswordEmail(data);
 
@@ -36,6 +39,7 @@ export class AuthController {
 
    @UseGuards(JwtTempStrategy)
    @Post('password-reset/confirm')
+   @HttpCode(200)
    async resetPassword(
       @Headers('Authorization') auth: string,
       @Body() data: any,
