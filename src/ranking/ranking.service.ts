@@ -67,8 +67,6 @@ export class RankingService {
             RANKING_CACHE_TTL,
          );
 
-         console.log(await this.redis.getJson('rankingEntries'));
-
          return rankingEntries;
       } catch (err) {
          console.error(err);
