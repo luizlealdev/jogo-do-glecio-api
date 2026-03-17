@@ -3,17 +3,17 @@ import { Response } from 'express';
 import { AvatarsService } from './avatars.service';
 import { join } from 'path';
 
-@Controller('api/v1/avatars')
+@Controller('api')
 export class AvatarsController {
    constructor(private avatarsService: AvatarsService) {}
 
-   @Get()
+   @Get('/v1/avatars')
    async getAvatars() {
       const avatars = await this.avatarsService.getAvatars();
       return avatars;
    }
 
-   @Get(':id')
+   @Get('/v1/avatars/id/:id')
    async getSpecificAvatar(
       @Headers('Authorization') auth: string,
       @Param('id') id,
@@ -22,7 +22,16 @@ export class AvatarsController {
       return avatar;
    }
 
-   @Get(':size/:id')
+   @Get('v2/avatars/:id')
+   async getSpecificAvatarV2(
+      @Headers('Authorization') auth: string,
+      @Param('id') id,
+   ) {
+      const avatar = await this.avatarsService.getSpecificAvatar(id, auth);
+      return avatar;
+   }
+
+   @Get('/v1/avatars/:size/:id')
    async getAvatarImage(
       @Param('size') size,
       @Param('id') id,

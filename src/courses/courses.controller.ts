@@ -1,20 +1,27 @@
 import { Controller, Get, Param, Res, Headers } from '@nestjs/common';
 import { CoursesService } from './courses.service';
 
-@Controller('api/v1/courses')
+@Controller('api')
 export class CoursesController {
    constructor(private coursesService: CoursesService) {}
 
-   @Get()
-   async getCourses(
-      @Headers('Authorization') auth: string,
-   ) {
+   @Get('/v1/courses')
+   async getCourses(@Headers('Authorization') auth: string) {
       const courses = await this.coursesService.getCourses(auth);
       return courses;
    }
 
-   @Get(':id')
+   @Get('/v2/courses/:id')
    async getSpecificCourse(
+      @Headers('Authorization') auth: string,
+      @Param('id') id,
+   ) {
+      const course = await this.coursesService.getSpecificCourse(id, auth);
+      return course;
+   }
+
+   @Get('/v2/courses/id/:id')
+   async getSpecificCourseV2(
       @Headers('Authorization') auth: string,
       @Param('id') id,
    ) {
