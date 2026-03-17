@@ -5,13 +5,19 @@ import { CoursesService } from './courses.service';
 export class CoursesController {
    constructor(private coursesService: CoursesService) {}
 
-   @Get('/v1/courses')
+   @Get('/v1/courses/all')
    async getCourses(@Headers('Authorization') auth: string) {
       const courses = await this.coursesService.getCourses(auth);
       return courses;
    }
 
-   @Get('/v2/courses/:id')
+   @Get('/v1/courses')
+   async getCoursesV2(@Headers('Authorization') auth: string) {
+      const courses = await this.coursesService.getCourses(auth);
+      return courses;
+   }
+
+   @Get('/v1/courses/id/:id')
    async getSpecificCourse(
       @Headers('Authorization') auth: string,
       @Param('id') id,
@@ -20,7 +26,8 @@ export class CoursesController {
       return course;
    }
 
-   @Get('/v2/courses/id/:id')
+   //TODO: atualizar para v2 e remover a rota antiga depois de um tempo
+   @Get('/v1/courses/:id')
    async getSpecificCourseV2(
       @Headers('Authorization') auth: string,
       @Param('id') id,
