@@ -34,7 +34,28 @@ export class RedisService {
       const data = await this.redis.get<T>(key);
       if (!data) return null;
 
-      return data
+      return data;
+   }
+
+   async zadd(key: string, score: number, member: any) {
+      return this.redis.zadd(key, { score, member: typeof member === 'object' ? JSON.stringify(member) : member });
+   }
+
+   async zrange(
+      key: string,
+      start: number,
+      stop: number,
+      options?: { rev?: boolean; withScores?: boolean },
+   ) {
+      return this.redis.zrange(key, start, stop, options);
+   }
+
+   async expire(key: string, seconds: number) {
+      return this.redis.expire(key, seconds);
+   }
+
+   async exists(key: string) {
+      return this.redis.exists(key);
    }
 
    async del(key: string) {
