@@ -1,4 +1,4 @@
-import { IsBoolean, IsNotEmpty, IsNotEmptyObject, isNotEmptyObject, IsNumber } from "class-validator";
+import { IsArray, IsBoolean, IsNotEmpty, IsNotEmptyObject, isNotEmptyObject, IsNumber } from "class-validator";
 
 type OperationType = "all" | "sum" | "sub" | "mult" | "div";
 
@@ -10,6 +10,7 @@ class CreateRoomConfig {
     @IsNumber()
     time: number;
 
+    @IsArray()
     operations: OperationType[]
 }
 
