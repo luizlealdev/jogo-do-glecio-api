@@ -3,6 +3,7 @@ import { RedisService } from 'src/redis/redis.service';
 import { customAlphabet } from 'nanoid';
 import { TokenUtils } from 'src/utils/token-utils';
 import { JwtService } from '@nestjs/jwt';
+import { CreateRoomDto } from "./dto/create-room.dto";
 
 export interface UserData {
    id: string;
@@ -29,7 +30,7 @@ export class RoomsService {
       this.tokenUtils = new TokenUtils(this.jwtService);
    }
 
-   async createRoom(auth: string): Promise<any> {
+   async createRoom(auth: string, data: CreateRoomDto): Promise<any> {
       try {
          const decodedToken = this.tokenUtils.getDecodedToken(auth);
          const userId = decodedToken.sub;
@@ -38,7 +39,7 @@ export class RoomsService {
 
          await this.redis.set(
             redisKey,
-            JSON.stringify({ host: userId, createdAt: Date.now() }),
+            JSON.stringify({ host: userId, createdAt: Date.now(), data }),
             ROOM_RANKING_TTL,
          );
 
