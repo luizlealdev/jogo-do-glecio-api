@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { BigIntInterceptor } from './common/interceptors/bigint.interceptor';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
+import { WsAdapter } from '@nestjs/platform-ws';
 
 async function bootstrap() {
    const app = await NestFactory.create(AppModule);
@@ -24,6 +25,8 @@ async function bootstrap() {
       allowedHeaders:
          'Origin, Authorization, X-Requested-With, Content-Type, Accept, Authentication, Access-control-allow-credentials, Access-control-allow-headers, Access-control-allow-methods, Access-control-allow-origin, User-Agent, Referer, Accept-Encoding, Accept-Language, Access-Control-Request-Headers, Cache-Control, Pragma',
    });
+
+   app.useWebSocketAdapter(new WsAdapter(app));
 
    await app.listen(3000);
 }

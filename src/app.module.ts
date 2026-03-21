@@ -20,6 +20,8 @@ import { MailModule } from './mail/mail.module';
 import { APP_GUARD } from '@nestjs/core';
 import { RedisModule } from "./redis/redis.module";
 import { RedisService } from "./redis/redis.service";
+import { RoomsModule } from "./rooms/rooms.module";
+import { RoomsController } from "./rooms/rooms.controller";
 
 @Module({
    imports: [
@@ -28,6 +30,7 @@ import { RedisService } from "./redis/redis.service";
       UserModule,
       MailModule,
       RedisModule,
+      RoomsModule,
       ScheduleModule.forRoot(),
    ],
    controllers: [
