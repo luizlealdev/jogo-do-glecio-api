@@ -3,7 +3,7 @@ import { RedisService } from 'src/redis/redis.service';
 import { customAlphabet } from 'nanoid';
 import { TokenUtils } from 'src/utils/token-utils';
 import { JwtService } from '@nestjs/jwt';
-import { CreateRoomDto } from "./dto/create-room.dto";
+import { CreateRoomDto } from './dto/create-room.dto';
 
 export interface UserData {
    id: string;
@@ -39,7 +39,7 @@ export class RoomsService {
 
          await this.redis.set(
             redisKey,
-            JSON.stringify({ host: userId, createdAt: Date.now(), data }),
+            JSON.stringify({ host: userId, createdAt: Date.now(), ...data }),
             ROOM_RANKING_TTL,
          );
 
@@ -48,6 +48,12 @@ export class RoomsService {
          this.logger.error('Erro ao criar sala:', error);
          throw error;
       }
+   }
+
+   async getRoomMetadata(roomId: string): Promise<any> {
+      const redisKey = `room:${roomId}:metadata`;
+
+      return this.redis.getJson(redisKey);
    }
 
    async saveScore(roomId: string, userData: UserData, score: number) {
